@@ -182,31 +182,46 @@
             </div>
 
             <h2 class="text-2xl sm:text-4xl font-extrabold text-[#2b2520] font-['Playfair_Display',serif] leading-tight">
-              Экспресс-осмотр (15 минут) — <span class="text-emerald-700">0 ₸</span>
-              <span class="line-through text-[#8c7e71] text-xl sm:text-2xl font-normal ml-2 decoration-rose-600 decoration-2">10 000 ₸</span>
+              Экспресс-осмотр зубов
             </h2>
 
-            <p class="text-sm sm:text-base font-semibold text-[#3b3229]">
+            <!-- Fixed unbreakable price block -->
+            <div class="flex flex-wrap items-center gap-3.5 pt-1">
+              <span class="text-xs text-[#7d6f60] uppercase tracking-wider font-bold">Стоимость:</span>
+              <span class="line-through text-[#8c7e71] text-2xl sm:text-3xl font-medium decoration-rose-600 decoration-2 whitespace-nowrap">
+                10 000 ₸
+              </span>
+              <span class="text-emerald-700 font-extrabold text-3xl sm:text-5xl tracking-tight whitespace-nowrap">
+                0 ₸
+              </span>
+              <span class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                Бесплатно
+              </span>
+            </div>
+
+            <p class="text-sm sm:text-base font-semibold text-[#3b3229] pt-1">
               Быстрая оценка состояния зубов и расчет точной сметы у врача высшей категории. Никаких очередей и никаких обязательств.
             </p>
 
-            <!-- 2 Simple Steps -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              <div class="flex items-center gap-3 p-3.5 rounded-xl bg-white/85 border border-[#e5d8c3] shadow-2xs">
-                <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center shrink-0 text-xs">
-                  15 мин
+            <!-- 2 Polished Cards with Lucide Icons -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+              <div class="flex items-center gap-3.5 p-3.5 rounded-2xl bg-white/90 border border-[#e5d8c3] shadow-2xs">
+                <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                  <i data-lucide="clock" class="w-5 h-5"></i>
                 </div>
-                <div class="text-xs text-[#524538]">
-                  Доктор находит причину дискомфорта и называет <strong>точную цену</strong>
+                <div class="text-xs text-[#524538] leading-snug">
+                  <span class="font-bold text-[#2b2520] block mb-0.5">15 минут в кресле:</span>
+                  Доктор находит причину и называет точную стоимость
                 </div>
               </div>
               
-              <div class="flex items-center gap-3 p-3.5 rounded-xl bg-white/85 border border-[#e5d8c3] shadow-2xs">
-                <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center shrink-0 text-xs">
-                  0 ₸
+              <div class="flex items-center gap-3.5 p-3.5 rounded-2xl bg-white/90 border border-[#e5d8c3] shadow-2xs">
+                <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                  <i data-lucide="file-check" class="w-5 h-5"></i>
                 </div>
-                <div class="text-xs text-[#524538]">
-                  Вы получаете план на руки. Лечите сейчас или позже — за осмотр <strong>0 ₸</strong>
+                <div class="text-xs text-[#524538] leading-snug">
+                  <span class="font-bold text-[#2b2520] block mb-0.5">Честный план на руки:</span>
+                  Лечите сразу или позже — за сам осмотр <strong>0 ₸</strong>
                 </div>
               </div>
             </div>
