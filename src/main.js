@@ -1,13 +1,17 @@
 import { createIcons, icons } from 'lucide';
 import './style.css';
+import { guard } from './guard';
 
 // Initialize Lucide icons
 createIcons({
   icons,
 });
 
+// Initialize SmartDent Guard (100% invisible bot & human verification shield)
+guard.init();
+
 // =========================================================================
-// 1. CONFIGURATION (100% ANONYMOUS TELEGRAM CLINIC ROUTING)
+// 1. CONFIGURATION (TELEGRAM CLINIC ROUTING)
 // =========================================================================
 export const TELEGRAM_USERNAME = 'smartdent_kz'; // @smartdent_kz
 export const TELEGRAM_URL = `https://t.me/${TELEGRAM_USERNAME}`;
@@ -33,6 +37,9 @@ const successCloseBtn = document.getElementById('success-close-btn');
 // 2. MODAL CONTROLS
 // =========================================================================
 function openBookingModal(suggestedService = '') {
+  if (guard.isBot) return;
+  guard.recordModalOpen();
+
   if (!bookingModal) return;
 
   // Default to Telegram View
@@ -74,12 +81,31 @@ function closeBookingModal() {
   document.body.style.overflow = '';
 }
 
-// Bind all booking trigger buttons on the page
+// Bind all booking trigger buttons on the page with human event verification
 document.querySelectorAll('.open-booking-modal').forEach(btn => {
   btn.addEventListener('click', (e) => {
+    if (guard.isBot || (e && e.isTrusted === false)) {
+      e.preventDefault();
+      return;
+    }
     e.preventDefault();
     const service = btn.dataset.service || '';
     openBookingModal(service);
+  });
+});
+
+// Protect direct telegram links
+document.querySelectorAll('[data-tg-shield]').forEach(link => {
+  link.addEventListener('click', (e) => {
+    if (guard.isBot || (e && e.isTrusted === false)) {
+      e.preventDefault();
+      return;
+    }
+    const currentHref = link.getAttribute('href');
+    if (!currentHref || currentHref.startsWith('javascript')) {
+      e.preventDefault();
+      window.open(TELEGRAM_URL, '_blank', 'noopener,noreferrer');
+    }
   });
 });
 
@@ -102,7 +128,8 @@ document.addEventListener('keydown', (e) => {
 
 // View switching
 if (switchToFormBtn) {
-  switchToFormBtn.addEventListener('click', () => {
+  switchToFormBtn.addEventListener('click', (e) => {
+    if (guard.isBot || (e && e.isTrusted === false)) return;
     if (bookingTelegramView) bookingTelegramView.classList.add('hidden');
     if (bookingForm) {
       bookingForm.classList.remove('hidden');
@@ -115,7 +142,8 @@ if (switchToFormBtn) {
 }
 
 if (backToTelegramBtn) {
-  backToTelegramBtn.addEventListener('click', () => {
+  backToTelegramBtn.addEventListener('click', (e) => {
+    if (guard.isBot || (e && e.isTrusted === false)) return;
     if (bookingForm) bookingForm.classList.add('hidden');
     if (bookingTelegramView) {
       bookingTelegramView.classList.remove('hidden');
@@ -125,10 +153,15 @@ if (backToTelegramBtn) {
 }
 
 // =========================================================================
-// 3. ANONYMOUS TELEGRAM LAUNCHER
+// 3. TELEGRAM LAUNCHER
 // =========================================================================
 if (launchTelegramBtn) {
-  launchTelegramBtn.addEventListener('click', () => {
+  launchTelegramBtn.addEventListener('click', (e) => {
+    if (guard.isBot || (e && e.isTrusted === false)) {
+      e.preventDefault();
+      return;
+    }
+
     const service = telegramServiceSelect ? telegramServiceSelect.value : 'Консультация';
     const message = `Здравствуйте! Хочу записаться на прием в клинику «Смарт Дент».\nИнтересующая процедура: ${service}.\n(Заявка с сайта smartdent.kz)`;
     const telegramUrl = `https://t.me/${TELEGRAM_USERNAME}?text=${encodeURIComponent(message)}`;
@@ -138,7 +171,7 @@ if (launchTelegramBtn) {
       window.ym(window.METRIKA_COUNTER_ID, 'reachGoal', 'telegram_click');
     }
 
-    console.log('[Anonymous Lead] Opening Telegram for service:', service);
+    console.log('[Lead] Opening Telegram for service:', service);
     window.open(telegramUrl, '_blank', 'noopener,noreferrer');
     closeBookingModal();
   });
@@ -171,6 +204,18 @@ if (patientPhoneInput) {
 if (bookingForm) {
   bookingForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    if (guard.isBot || (e && e.isTrusted === false)) {
+      return;
+    }
+
+    // Check honeypot
+    const hpTitle = document.getElementById('hp_company_title');
+    const hpEmail = document.getElementById('hp_direct_email');
+    if ((hpTitle && hpTitle.value.trim() !== '') || (hpEmail && hpEmail.value.trim() !== '')) {
+      console.warn('Bot detected by honeypot');
+      return;
+    }
 
     const name = patientNameInput ? patientNameInput.value.trim() : 'Пациент';
     const phone = patientPhoneInput ? patientPhoneInput.value.trim() : '';
