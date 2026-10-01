@@ -6,51 +6,48 @@ createIcons({
   icons,
 });
 
-// 1. ONLINE BOOKING MODAL & SECURE LEAD HANDLING (NO PUBLIC PHONE NUMBERS)
+// =========================================================================
+// 1. CONFIGURATION (100% ANONYMOUS TELEGRAM CLINIC ROUTING)
+// =========================================================================
+export const TELEGRAM_USERNAME = 'smartdent_kz'; // @smartdent_kz
+export const TELEGRAM_URL = `https://t.me/${TELEGRAM_USERNAME}`;
+
+// DOM Elements
 const bookingModal = document.getElementById('booking-modal');
 const closeBookingBtn = document.getElementById('close-booking-btn');
+const bookingTelegramView = document.getElementById('booking-telegram-view');
+const telegramServiceSelect = document.getElementById('telegram-service-select');
+const launchTelegramBtn = document.getElementById('launch-telegram-btn');
+const switchToFormBtn = document.getElementById('switch-to-form-btn');
+const backToTelegramBtn = document.getElementById('back-to-telegram-btn');
+
 const bookingForm = document.getElementById('booking-form');
 const bookingSuccess = document.getElementById('booking-success');
 const patientNameInput = document.getElementById('patient-name');
 const patientPhoneInput = document.getElementById('patient-phone');
-const patientServiceSelect = document.getElementById('patient-service');
 const submitBookingBtn = document.getElementById('submit-booking-btn');
 const successPatientName = document.getElementById('success-patient-name');
 const successCloseBtn = document.getElementById('success-close-btn');
 
+// =========================================================================
+// 2. MODAL CONTROLS
+// =========================================================================
 function openBookingModal(suggestedService = '') {
   if (!bookingModal) return;
 
-  // Reset states
-  if (bookingForm) bookingForm.classList.remove('hidden');
+  // Default to Telegram View
+  if (bookingTelegramView) bookingTelegramView.classList.remove('hidden');
+  if (bookingForm) bookingForm.classList.add('hidden');
   if (bookingSuccess) bookingSuccess.classList.add('hidden');
 
-  // Auto-match service if clicked from a specific service card
-  if (suggestedService && patientServiceSelect) {
-    let matched = false;
-    for (let i = 0; i < patientServiceSelect.options.length; i++) {
-      const opt = patientServiceSelect.options[i];
+  // Auto-match service in Telegram select
+  if (suggestedService && telegramServiceSelect) {
+    for (let i = 0; i < telegramServiceSelect.options.length; i++) {
+      const opt = telegramServiceSelect.options[i];
       if (opt.text.toLowerCase().includes(suggestedService.toLowerCase()) || 
-          suggestedService.toLowerCase().includes(opt.value.toLowerCase().slice(0, 10))) {
-        patientServiceSelect.selectedIndex = i;
-        matched = true;
+          suggestedService.toLowerCase().includes(opt.value.toLowerCase().slice(0, 8))) {
+        telegramServiceSelect.selectedIndex = i;
         break;
-      }
-    }
-    if (!matched) {
-      for (let i = 0; i < patientServiceSelect.options.length; i++) {
-        if (suggestedService.toLowerCase().includes('чистк') && patientServiceSelect.options[i].text.includes('чистк')) {
-          patientServiceSelect.selectedIndex = i;
-          break;
-        }
-        if (suggestedService.toLowerCase().includes('кариес') && patientServiceSelect.options[i].text.includes('кариес')) {
-          patientServiceSelect.selectedIndex = i;
-          break;
-        }
-        if (suggestedService.toLowerCase().includes('винир') || suggestedService.toLowerCase().includes('коронк')) {
-          patientServiceSelect.selectedIndex = i;
-          break;
-        }
       }
     }
   }
@@ -64,10 +61,6 @@ function openBookingModal(suggestedService = '') {
   document.body.style.overflow = 'hidden';
 
   createIcons({ icons });
-
-  setTimeout(() => {
-    if (patientNameInput) patientNameInput.focus();
-  }, 100);
 }
 
 function closeBookingModal() {
@@ -81,7 +74,7 @@ function closeBookingModal() {
   document.body.style.overflow = '';
 }
 
-// Bind all booking trigger buttons
+// Bind all booking trigger buttons on the page
 document.querySelectorAll('.open-booking-modal').forEach(btn => {
   btn.addEventListener('click', (e) => {
     e.preventDefault();
@@ -91,7 +84,7 @@ document.querySelectorAll('.open-booking-modal').forEach(btn => {
 });
 
 if (closeBookingBtn) closeBookingBtn.addEventListener('click', closeBookingModal);
-if (successCloseBtn) closeBookingBtn.addEventListener('click', closeBookingModal);
+if (successCloseBtn) successCloseBtn.addEventListener('click', closeBookingModal);
 
 if (bookingModal) {
   bookingModal.addEventListener('click', (e) => {
@@ -106,6 +99,50 @@ document.addEventListener('keydown', (e) => {
     closePrivacyModal();
   }
 });
+
+// View switching
+if (switchToFormBtn) {
+  switchToFormBtn.addEventListener('click', () => {
+    if (bookingTelegramView) bookingTelegramView.classList.add('hidden');
+    if (bookingForm) {
+      bookingForm.classList.remove('hidden');
+      createIcons({ icons });
+      setTimeout(() => {
+        if (patientNameInput) patientNameInput.focus();
+      }, 100);
+    }
+  });
+}
+
+if (backToTelegramBtn) {
+  backToTelegramBtn.addEventListener('click', () => {
+    if (bookingForm) bookingForm.classList.add('hidden');
+    if (bookingTelegramView) {
+      bookingTelegramView.classList.remove('hidden');
+      createIcons({ icons });
+    }
+  });
+}
+
+// =========================================================================
+// 3. ANONYMOUS TELEGRAM LAUNCHER
+// =========================================================================
+if (launchTelegramBtn) {
+  launchTelegramBtn.addEventListener('click', () => {
+    const service = telegramServiceSelect ? telegramServiceSelect.value : 'Консультация';
+    const message = `Здравствуйте! Хочу записаться на прием в клинику «Смарт Дент».\nИнтересующая процедура: ${service}.\n(Заявка с сайта smartdent.kz)`;
+    const telegramUrl = `https://t.me/${TELEGRAM_USERNAME}?text=${encodeURIComponent(message)}`;
+
+    // Track analytics
+    if (typeof window.ym === 'function' && window.METRIKA_COUNTER_ID) {
+      window.ym(window.METRIKA_COUNTER_ID, 'reachGoal', 'telegram_click');
+    }
+
+    console.log('[Anonymous Lead] Opening Telegram for service:', service);
+    window.open(telegramUrl, '_blank', 'noopener,noreferrer');
+    closeBookingModal();
+  });
+}
 
 // Auto phone formatting for patient phone input
 if (patientPhoneInput) {
@@ -128,19 +165,21 @@ if (patientPhoneInput) {
   });
 }
 
-// Form Submission -> Sends lead to info@smartdent.kz & Local Storage
+// =========================================================================
+// 4. SECONDARY FORM SUBMISSION (FOR VISITORS WITHOUT TELEGRAM)
+// =========================================================================
 if (bookingForm) {
   bookingForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const name = patientNameInput ? patientNameInput.value.trim() : 'Пациент';
     const phone = patientPhoneInput ? patientPhoneInput.value.trim() : '';
-    const service = patientServiceSelect ? patientServiceSelect.value : 'Консультация';
+    const service = telegramServiceSelect ? telegramServiceSelect.value : 'Консультация';
     const timeRadio = document.querySelector('input[name="visit-time"]:checked');
     const time = timeRadio ? timeRadio.value : 'Ближайшие дни';
 
     if (!name || !phone || phone.length < 10) {
-      alert('Пожалуйста, укажите ваше имя и контактный номер телефона.');
+      alert('Пожалуйста, укажите ваше имя и контактный телефон.');
       return;
     }
 
@@ -158,7 +197,7 @@ if (bookingForm) {
       source: 'smartdent.kz'
     };
 
-    // 1. Save in local storage (guarantees zero lead loss)
+    // Save in local storage (zero lead loss)
     try {
       const existingLeads = JSON.parse(localStorage.getItem('smartdent_leads') || '[]');
       existingLeads.push(leadData);
@@ -167,7 +206,7 @@ if (bookingForm) {
       console.warn('LocalStorage error:', err);
     }
 
-    // 2. Dispatch via FormSubmit AJAX to corporate inbox info@smartdent.kz
+    // Dispatch via FormSubmit AJAX to corporate inbox info@smartdent.kz
     try {
       await fetch('https://formsubmit.co/ajax/info@smartdent.kz', {
         method: 'POST',
@@ -176,7 +215,7 @@ if (bookingForm) {
           'Accept': 'application/json'
         },
         body: JSON.stringify({
-          _subject: `Новая запись: ${name} (${service})`,
+          _subject: `Новая заявка с сайта: ${name} (${service})`,
           "Имя пациента": name,
           "Телефон": phone,
           "Интересующая услуга": service,
@@ -185,15 +224,14 @@ if (bookingForm) {
         })
       });
     } catch (err) {
-      console.warn('FormSubmit fetch failed (fallback to local lead):', err);
+      console.warn('FormSubmit fetch fallback:', err);
     }
 
-    // 3. Yandex Metrika goal tracking
     if (typeof window.ym === 'function' && window.METRIKA_COUNTER_ID) {
       window.ym(window.METRIKA_COUNTER_ID, 'reachGoal', 'lead_form_submitted');
     }
 
-    // 4. Show success screen
+    // Show success view
     if (bookingForm) bookingForm.classList.add('hidden');
     if (bookingSuccess) {
       bookingSuccess.classList.remove('hidden');
@@ -203,13 +241,15 @@ if (bookingForm) {
 
     if (submitBookingBtn) {
       submitBookingBtn.disabled = false;
-      submitBookingBtn.innerHTML = '<i data-lucide="calendar-check" class="w-5 h-5"></i><span>Отправить заявку на прием</span>';
+      submitBookingBtn.innerHTML = '<i data-lucide="calendar-check" class="w-4 h-4"></i><span>Отправить заявку</span>';
     }
     bookingForm.reset();
   });
 }
 
-// 2. Cookie & Privacy Banner logic
+// =========================================================================
+// 5. COOKIE & PRIVACY BANNER
+// =========================================================================
 const cookieBanner = document.getElementById('cookie-banner');
 const acceptCookieBtn = document.getElementById('accept-cookie-btn');
 const privacyModal = document.getElementById('privacy-modal');
@@ -232,7 +272,6 @@ if (acceptCookieBtn && cookieBanner) {
   });
 }
 
-// 3. Privacy Modal open/close handlers
 function openPrivacyModal() {
   if (!privacyModal) return;
   privacyModal.classList.remove('opacity-0', 'pointer-events-none');
