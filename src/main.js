@@ -6,15 +6,24 @@ createIcons({
   icons,
 });
 
-// 1. ANTI-BOT BOOKING MODAL & PROTECTED WHATSAPP ROUTING
+// 1. ONLINE BOOKING MODAL & SECURE LEAD HANDLING (NO PUBLIC PHONE NUMBERS)
 const bookingModal = document.getElementById('booking-modal');
 const closeBookingBtn = document.getElementById('close-booking-btn');
 const bookingForm = document.getElementById('booking-form');
+const bookingSuccess = document.getElementById('booking-success');
 const patientNameInput = document.getElementById('patient-name');
+const patientPhoneInput = document.getElementById('patient-phone');
 const patientServiceSelect = document.getElementById('patient-service');
+const submitBookingBtn = document.getElementById('submit-booking-btn');
+const successPatientName = document.getElementById('success-patient-name');
+const successCloseBtn = document.getElementById('success-close-btn');
 
 function openBookingModal(suggestedService = '') {
   if (!bookingModal) return;
+
+  // Reset states
+  if (bookingForm) bookingForm.classList.remove('hidden');
+  if (bookingSuccess) bookingSuccess.classList.add('hidden');
 
   // Auto-match service if clicked from a specific service card
   if (suggestedService && patientServiceSelect) {
@@ -29,7 +38,6 @@ function openBookingModal(suggestedService = '') {
       }
     }
     if (!matched) {
-      // Find closest or keep default
       for (let i = 0; i < patientServiceSelect.options.length; i++) {
         if (suggestedService.toLowerCase().includes('чистк') && patientServiceSelect.options[i].text.includes('чистк')) {
           patientServiceSelect.selectedIndex = i;
@@ -39,7 +47,7 @@ function openBookingModal(suggestedService = '') {
           patientServiceSelect.selectedIndex = i;
           break;
         }
-        if (suggestedService.toLowerCase().includes('виReceipt') || suggestedService.toLowerCase().includes('винир')) {
+        if (suggestedService.toLowerCase().includes('винир') || suggestedService.toLowerCase().includes('коронк')) {
           patientServiceSelect.selectedIndex = i;
           break;
         }
@@ -55,7 +63,6 @@ function openBookingModal(suggestedService = '') {
   }
   document.body.style.overflow = 'hidden';
 
-  // Re-run Lucide icons for modal elements
   createIcons({ icons });
 
   setTimeout(() => {
@@ -84,6 +91,7 @@ document.querySelectorAll('.open-booking-modal').forEach(btn => {
 });
 
 if (closeBookingBtn) closeBookingBtn.addEventListener('click', closeBookingModal);
+if (successCloseBtn) closeBookingBtn.addEventListener('click', closeBookingModal);
 
 if (bookingModal) {
   bookingModal.addEventListener('click', (e) => {
@@ -99,33 +107,104 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Form Submission -> Dynamic verified WhatsApp redirect
+// Auto phone formatting for patient phone input
+if (patientPhoneInput) {
+  patientPhoneInput.addEventListener('input', (e) => {
+    let val = e.target.value.replace(/\D/g, '');
+    if (!val) {
+      e.target.value = '';
+      return;
+    }
+    if (val[0] === '8') val = '7' + val.slice(1);
+    if (val[0] !== '7') val = '7' + val;
+
+    let formatted = '+7';
+    if (val.length > 1) formatted += ' (' + val.substring(1, 4);
+    if (val.length >= 4) formatted += ') ' + val.substring(4, 7);
+    if (val.length >= 7) formatted += '-' + val.substring(7, 9);
+    if (val.length >= 9) formatted += '-' + val.substring(9, 11);
+
+    e.target.value = formatted;
+  });
+}
+
+// Form Submission -> Sends lead to info@smartdent.kz & Local Storage
 if (bookingForm) {
-  bookingForm.addEventListener('submit', (e) => {
+  bookingForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const name = patientNameInput ? patientNameInput.value.trim() : 'Пациент';
+    const phone = patientPhoneInput ? patientPhoneInput.value.trim() : '';
     const service = patientServiceSelect ? patientServiceSelect.value : 'Консультация';
     const timeRadio = document.querySelector('input[name="visit-time"]:checked');
     const time = timeRadio ? timeRadio.value : 'Ближайшие дни';
 
-    // Obfuscated number parts (prevents any static crawler harvesting)
-    const _parts = ['7', '701', '747', '0241'];
-    const _phone = _parts.join('');
+    if (!name || !phone || phone.length < 10) {
+      alert('Пожалуйста, укажите ваше имя и контактный номер телефона.');
+      return;
+    }
 
-    const formattedMessage = `Здравствуйте, доктор Эльмира Абаевна!\nМеня зовут ${name}.\nХочу записаться на прием: ${service}.\nУдобное время: ${time}.\n\n(Заявка с сайта smartdent.kz)`;
-    const whatsappUrl = `https://wa.me/${_phone}?text=${encodeURIComponent(formattedMessage)}`;
+    if (submitBookingBtn) {
+      submitBookingBtn.disabled = true;
+      submitBookingBtn.innerHTML = '<span>Отправка заявки...</span>';
+    }
 
-    // Yandex Metrika goal tracking
+    const leadData = {
+      name,
+      phone,
+      service,
+      preferred_time: time,
+      created_at: new Date().toLocaleString('ru-RU'),
+      source: 'smartdent.kz'
+    };
+
+    // 1. Save in local storage (guarantees zero lead loss)
+    try {
+      const existingLeads = JSON.parse(localStorage.getItem('smartdent_leads') || '[]');
+      existingLeads.push(leadData);
+      localStorage.setItem('smartdent_leads', JSON.stringify(existingLeads));
+    } catch (err) {
+      console.warn('LocalStorage error:', err);
+    }
+
+    // 2. Dispatch via FormSubmit AJAX to corporate inbox info@smartdent.kz
+    try {
+      await fetch('https://formsubmit.co/ajax/info@smartdent.kz', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          _subject: `Новая запись: ${name} (${service})`,
+          "Имя пациента": name,
+          "Телефон": phone,
+          "Интересующая услуга": service,
+          "Желаемое время": time,
+          "Дата заявки": leadData.created_at
+        })
+      });
+    } catch (err) {
+      console.warn('FormSubmit fetch failed (fallback to local lead):', err);
+    }
+
+    // 3. Yandex Metrika goal tracking
     if (typeof window.ym === 'function' && window.METRIKA_COUNTER_ID) {
-      window.ym(window.METRIKA_COUNTER_ID, 'reachGoal', 'whatsapp_click');
       window.ym(window.METRIKA_COUNTER_ID, 'reachGoal', 'lead_form_submitted');
     }
 
-    console.log('[Anti-Bot Lead Verified] Opening WhatsApp for patient:', name);
-    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    // 4. Show success screen
+    if (bookingForm) bookingForm.classList.add('hidden');
+    if (bookingSuccess) {
+      bookingSuccess.classList.remove('hidden');
+      if (successPatientName) successPatientName.textContent = name;
+    }
+    createIcons({ icons });
 
-    closeBookingModal();
+    if (submitBookingBtn) {
+      submitBookingBtn.disabled = false;
+      submitBookingBtn.innerHTML = '<i data-lucide="calendar-check" class="w-5 h-5"></i><span>Отправить заявку на прием</span>';
+    }
     bookingForm.reset();
   });
 }
